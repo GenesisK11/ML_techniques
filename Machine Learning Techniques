@@ -1,0 +1,322 @@
+#### Importamos librerias necesarias.
+
+import pandas as pd
+import numpy as np
+from scipy import stats
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import silhouette_score
+from scipy.stats import zscore
+import seaborn as sns
+import pingouin as pg
+from scipy.cluster.hierarchy import linkage, dendrogram
+from scipy.cluster.hierarchy import fcluster
+from scipy.spatial.distance import cdist
+
+########################################################################################################################################
+
+### Cargamos el documento y visualizamos las columnas
+
+ruta_archivo = 'C:\\ Ruta a la base de datos xlsx'
+df = pd.read_excel(ruta_archivo, engine='openpyxl')
+print(df.columns)
+
+#####################################################################################################################################
+
+# Seleccionamos solo las columnas que nos interesan. Como vamos a realiazr clustering con K-MEANS, solo variables númericas.
+cols_interes = ['variable1','variable2','variable3'...]
+df_interes=df['cols_interes']
+
+# Detectamos outliers
+Q1=df_interes.quantile(0.25)
+Q3=df_interes.quantile(0.75)
+IQR=Q3-Q1
+outliers=((df_interes<(Q1-1.5*IQR))|(df_interes>(Q3+1.5*IQR))).sum()
+print(outliers)
+
+# Matriz de correlación (Pearson y Spearman) y la visualizamos en forma de mapa de calor
+corr_matriz=df_interes.corr()
+spearman_corr=df_interes.corr(method='spearman')
+plt.figure(figsize=(20,16))
+sns.heatmap(corr_matrix,annot=true,cmap='coolwarm') #Cambiar corr_matrix por spearman_corr para visualizar la correlación de Spearman
+plt.tittle("Matriz de correlación")
+plt.show()
+
+#Estadisticos descriptivos
+df_interes_describe=df_interes.describe()
+df_interes_skew=df_interes.skew()
+df_interes_kurtosis=df_interes.kurtosis
+print(df_interes_describe)
+print("coeficiente de Asimetria:\n", df_interes_skew)
+print("Kurtosis:\n", df_interes_kurtosis)
+
+#Pairplot
+sns.pairplot(df_interes)
+plt.show()
+
+######################################################################################################################################################
+# Analisis de componentes principales
+
+# Si necesitamos mantener una de las variables pero que no particpe en los cálculos
+var_1 = df['var1']
+
+# Eliminamos los outliers
+df_interes=df_interes[~((df_interes<(Q1-1.5*IQR))|(df_interes>(Q3+1,5*IQR))).any(axis=1)]
+
+# Normalizar los datos
+scaler=StandardScaler()
+scaled_data=scaler.fit_transform(df_interes)
+
+# Aplicar PCA con la cantidad de componentes necesarias para explicar al menos el 90%
+pca=PCA(n_componentes=0.9)
+pca_data=pca.fit_transform(scaled_data)
+
+# Creamos un nuevo dataframe con las componentes principales
+pca_df=pd.Dataframe(data=pca_data,columns=['componente{}'.format(i) for i in range (1,pca_data.shape[1]+1)])
+
+# Una vez creado el df con las componentes principales. podemos añadir las variables que queramos
+pca_df['var1']=var_1
+
+# Imprimimos el total de varianza explicada por todas las componentes
+print('total de varianza explicada por todas las componentes:',sum(pca.explained_variance_ratio_))
+
+# imprimimos las varianza explicada por cada componente principal
+print('varianza explicada por cada componente principal:'=
+for i, var_ratio in enumrate(pca.e.shapeexplained_variance_ratio_):
+     print(f'componente{i+1}: {var_ratio}')
+
+# Aportacion de cada variable al componente i
+for i, component in enumerate(pca.components_,start=1):"):
+for weight, feature in zip(component,df_interes.columns):
+print(f" {feature}: {weight}")
+print()
+
+#################################################################################################
+# K-Means
+# Vamos a separar los outliers y datos originales en dos DF diferentes
+
+# añadimos la variable categorica la cual queremos clasificar
+df_interes['var1']=df['var1]
+
+# Creamos una copia del df original para almacenar los datos sin outliers
+df_sin_outliers=df_interes.copy()
+
+# Creamos un nuevo df para almacenar outliers
+df_outliers=pd.Datafram(columns=df_interes.columns)
+
+# La variable categórica a clasificar no participa en el proceso
+columns_to_consider=df_interes.columns.dro('var1')
+
+# Marcar outliers para cada columna de interes
+for col in columns_to_consider
+Q1=df_interes[col].quantile(0.25)
+Q3=df_interes[col].quantile(0.75)
+IQR=Q3-Q1
+condicion_outlier=(df_interes[col]<(Q1-1.5*IQR))|(df_interes[col]>(Q3+1.5*IQR))
+outlier_indices.update(df_interes[condicion_outliers].index)
+
+# Almacenar los outliers en df_outliers
+df_outliers = df_numerico.loc[outlier_indices]
+
+# Eliminar las filas que son outliers en alguna de las columnas
+df_sin_outliers.drop(outlier_indices, inplace=True)
+
+# Escalar los datos
+scaler = StandardScaler()
+df_sin_outliers[columns_to_consider] = scaler.fit_transform(df_sin_outliers[columns_to_consider])
+
+# Separar la columna 'var1l' del dataframe df_outliers
+seccion_censal_outliers = df_outliers['Seccion censal']
+
+# Eliminar la columna 'var1' del dataframe df_outliers antes de la transformación
+df_outliers_to_scale = df_outliers.drop(columns='var1')
+
+# Escalar los datos de los outliers
+df_outliers_escalado = pd.DataFrame(scaler.transform(df_outliers_to_scale), columns=df_outliers_to_scale.columns, index=df_outliers_to_scale.index)
+
+# Agregar la columna 'var1' de nuevo al dataframe df_outliers_escalado
+df_outliers_escalado['var1'] = var_1_outliers
+
+##################
+
+# Elección del número de clústeres. Método del codo
+
+def calculate_wss_and_diff(data, max_k = 50):
+    wss = []
+    for k in range(1, max_k+1):
+        kmeans = KMeans(n_clusters=k, random_state=42)
+        kmeans.fit(data)
+        wss.append(kmeans.inertia_)
+    
+    diff_wss = [wss[i] - wss[i+1] for i in range(len(wss)-1)] 
+    return wss, diff_wss
+
+# Preparamos los dos conjuntos de datos
+df_no_var1_outliers = df_outliers_escalado.drop(columns='var1')
+df_no_var1_no_outliers = df_sin_outliers.drop(columns='var1')
+
+# Calculamos WSS y las diferencias para ambos conjuntos
+wss_outliers, diff_wss_outliers = calculate_wss_and_diff(df_no_var1_outliers)
+wss_no_outliers, diff_wss_no_outliers = calculate_wss_and_diff(df_no_var1_no_outliers)
+
+# Creamos las gráficas para los outliers (diferencias)
+plt.figure(figsize=(10, 6))
+plt.plot(range(2, 51), diff_wss_outliers, marker='o')
+plt.title('Método del Codo (Diferencias) para Outliers')
+plt.xlabel('Número de clusters (K)')
+plt.ylabel('Disminución de la suma de distancias al cuadrado')
+plt.grid(True)
+plt.show()
+
+# Creamos las gráficas para los no outliers (diferencias)
+plt.figure(figsize=(10, 6))
+plt.plot(range(2, 51), diff_wss_no_outliers, marker='o')
+plt.title('Método del Codo (Diferencias) para datos sin Outliers')
+plt.xlabel('Número de clusters (K)')
+plt.ylabel('Disminución de la suma de distancias al cuadrado')
+plt.grid(True)
+plt.show()
+
+# Creamos las gráficas para los outliers (WSS)
+plt.figure(figsize=(10, 6))
+plt.plot(range(1, 51), wss_outliers, marker='o')
+plt.title('Método del Codo para Outliers')
+plt.xlabel('Número de clusters (K)')
+plt.ylabel('Suma de distancias al cuadrado')
+plt.grid(True)
+plt.show()
+
+# Creamos las gráficas para los no outliers (WSS)
+plt.figure(figsize=(10, 6))
+plt.plot(range(1, 51), wss_no_outliers, marker='o')
+plt.title('Método del Codo para datos sin Outliers')
+plt.xlabel('Número de clusters (K)')
+plt.ylabel('Suma de distancias al cuadrado')
+plt.grid(True)
+plt.show()
+
+################################################################
+
+# Eleccion número de clusteress. Metodo Silhouette
+
+from sklearn.metrics import silhouette_score
+from sklearn.cluster import KMeans
+
+silhouette_scores_outliers = []
+silhouette_scores_no_outliers = []
+
+for n_clusters in range(2, 21):
+    kmeans_outliers = KMeans(n_clusters=n_clusters)
+    kmeans_no_outliers = KMeans(n_clusters=n_clusters)
+    
+    # Para los outliers
+    kmeans_outliers.fit(df_outliers_escalado.drop(columns='var1'))
+    labels_outliers = kmeans_outliers.labels_
+    silhouette_scores_outliers.append(silhouette_score(df_outliers_escalado.drop(columns='var1'), labels_outliers))
+    
+    # Para los no outliers
+    kmeans_no_outliers.fit(df_sin_outliers.drop(columns='var1'))
+    labels_no_outliers = kmeans_no_outliers.labels_
+    silhouette_scores_no_outliers.append(silhouette_score(df_sin_outliers.drop(columns='var1'), labels_no_outliers))
+
+# Creamos las gráficas para los outliers
+plt.figure(figsize=(10, 6))
+plt.plot(range(2, 21), silhouette_scores_outliers, 'bx-')
+plt.title('Método de la Silueta para Outliers')
+plt.xlabel('Número de clusters (K)')
+plt.ylabel('Coeficiente de Silueta')
+plt.grid(True)
+plt.show()
+
+# Creamos las gráficas para los no outliers
+plt.figure(figsize=(10, 6))
+plt.plot(range(2, 21), silhouette_scores_no_outliers, 'rx-')
+plt.title('Método de la Silueta para datos sin outliers')
+plt.xlabel('Número de clusters (K)')
+plt.ylabel('Coeficiente de Silueta')
+plt.grid(True)
+plt.show()
+
+# Imprimimos los coeficientes de silueta para outliers
+for i, silhouette_score_value in enumerate(silhouette_scores_outliers):
+    print(f"Para K = {i+2} (Outliers), Coeficiente de Silueta = {silhouette_score_value}")
+
+# Imprimimos los coeficientes de silueta para no outliers
+for i, silhouette_score_value in enumerate(silhouette_scores_no_outliers):
+    print(f"Para K = {i+2} (No Outliers), Coeficiente de Silueta = {silhouette_score_value}")
+
+
+
+########################################### Creación de grupos con K-Means. Datos originales y outliers por separado
+
+# Crear y entrenar un modelo KMeans con k = n clusters para df_outliers_escalado. Fijación de semilla para reproducibildiad de los resultados
+kmeans_outliers = KMeans(n_clusters=5, random_state=42)
+kmeans_outliers.fit(df_outliers_escalado.drop('var1', axis=1))
+
+# Añadir las etiquetas de los clusters al dataframe
+df_outliers_escalado['cluster'] = kmeans_outliers.labels_ + n    # Para que el etiquetado de los outliers continue el etiquetado de datos originales
+
+# Calcular los centroides
+centroides_outliers = kmeans_outliers.cluster_centers_
+
+# Contar el número de observaciones por cluster
+observaciones_por_cluster_outliers = df_outliers_escalado['cluster'].value_counts().sort_index()
+
+# Crear y entrenar un modelo KMeans con k = n clusters para df_sin_outliers
+kmeans_sin_outliers = KMeans(n_clusters=n, random_state=42)
+kmeans_sin_outliers.fit(df_sin_outliers.drop('Seccion censal', axis=1))
+
+# Añadir las etiquetas de los clusters al dataframe
+df_sin_outliers['cluster'] = kmeans_sin_outliers.labels_  
+
+# Calcular los centroides
+centroides_sin_outliers = kmeans_sin_outliers.cluster_centers_
+
+# Contar el número de observaciones por cluster
+observaciones_por_cluster_sin_outliers = df_sin_outliers['cluster'].value_counts().sort_index()
+
+
+print("Centroides para df_outliers_escalado:")
+print(centroides_outliers)
+print("Observaciones por cluster para df_outliers_escalado:")
+print(observaciones_por_cluster_outliers)
+
+print("\nCentroides para df_sin_outliers:")
+print(centroides_sin_outliers)
+print("Observaciones por cluster para df_sin_outliers:")
+print(observaciones_por_cluster_sin_outliers)
+
+
+##############################################################################
+
+# Visualizamos grupos creados. Mapas de dispersión. outliers y datos originales por separado.
+
+
+# Asumiendo que 'cluster' es el nombre de tu columna de clusters
+df_outliers_escalado['cluster'] = df_outliers_escalado['cluster']   
+
+# Dejamos solo las variables numéricas y la columna de etiquetas de los clusters
+vars_to_plot_outliers = df_outliers_escalado.drop('Seccion censal', axis=1)
+
+# Renombramos las columnas
+vars_to_plot_outliers = vars_to_plot_outliers.rename(columns=rename_dict)
+
+# Crear gráficos de dispersión para cada par de variables en df_outliers_escalado
+sns.pairplot(vars_to_plot_outliers, hue='cluster', palette='Set1')
+
+# Dejamos solo las variables numéricas y la columna de etiquetas de los clusters para df_sin_outliers
+vars_to_plot_sin_outliers = df_sin_outliers.drop('Seccion censal', axis=1)
+
+# Renombramos las columnas
+vars_to_plot_sin_outliers = vars_to_plot_sin_outliers.rename(columns=rename_dict)
+
+# Crear gráficos de dispersión para cada par de variables en df_sin_outliers
+sns.pairplot(vars_to_plot_sin_outliers, hue='cluster', palette='Set1')
+
+
+
+
+
